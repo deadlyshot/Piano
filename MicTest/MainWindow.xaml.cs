@@ -24,9 +24,6 @@ namespace MicTest {
     public partial class MainWindow : Window {
         public DispatcherTimer t=new DispatcherTimer ();
        // private FftPitchDetector pitchDetector;
-        private AutoCorrelator pitchDetector;
-        private WaveBuffer waveBuffer;
-        readonly SampleAggregator sampleAggregator=new SampleAggregator ();
         WaveFileWriter writer;
         WaveFormat recordingFormat;
         string waveFileName;
@@ -69,7 +66,7 @@ namespace MicTest {
         private WaveIn waveIn=null;
         private DirectSoundOut waveOut=null;
 
-        private void Button_Click (object sender, RoutedEventArgs e) {
+        private void Record_Click (object sender, RoutedEventArgs e) {
             if (sourceList.SelectedItems.Count==0) return;
 
             int deviceNumber=sourceList.SelectedIndex;
@@ -98,12 +95,12 @@ namespace MicTest {
             int bytesRecorded=e.BytesRecorded;
             WriteToFile (buffer, bytesRecorded);
 
-            for (int index=0; index<e.BytesRecorded; index+=2) {
-                short sample=(short) ((buffer[index+1]<<8)|
-                                        buffer[index+0]);
-                float sample32=sample/32768f;
-                sampleAggregator.Add (sample32);
-            }
+            //for (int index=0; index<e.BytesRecorded; index+=2) {
+            //    short sample=(short) ((buffer[index+1]<<8)|
+            //                            buffer[index+0]);
+            //    float sample32=sample/32768f;
+            //    sampleAggregator.Add (sample32);
+            //}
         }
 
         private void WriteToFile (byte[] buffer, int bytesRecorded) {
@@ -133,7 +130,6 @@ namespace MicTest {
             //  Stopped(this, EventArgs.Empty);
         }
 
-        public AutoTuneSettings autoTuneSettings=new AutoTuneSettings ();
         private void Play_Click (object sender, RoutedEventArgs e) {
             WaveOut waveOut1=new WaveOut ();
             WaveStream source=new WaveFileReader (waveFileName);
@@ -150,7 +146,6 @@ namespace MicTest {
             //}
 
             string tempFile = Path.Combine (Path.GetTempPath (), Guid.NewGuid ()+".wav");
-            AutoTuneUtils.ApplyAutoTune (waveFileName, tempFile, autoTuneSettings);
 
 
             waveOut1.Init (source);

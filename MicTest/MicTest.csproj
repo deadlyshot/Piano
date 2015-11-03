@@ -56,13 +56,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="AutoCorrelator.cs" />
-    <Compile Include="AutoTuneSettings.cs" />
-    <Compile Include="AutoTuneWaveProvider.cs" />
-    <Compile Include="IPitchDetector.cs" />
-    <Compile Include="ReadFreaquency.cs" />
-    <Compile Include="SampleAggregator.cs" />
-    <Compile Include="TrimWaveStream.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -71,7 +64,6 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="FftPitchDetector.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
