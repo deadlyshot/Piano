@@ -30,6 +30,8 @@ namespace MicTest {
         private void GenerateSpectogram() {
             for (int i = 0; i < 1024; i++) {
                 ProgressBar newPb = new ProgressBar();
+                newPb.Minimum = -80;
+                newPb.Maximum = 0;
                 spectogram.Children.Add(newPb);
             }
         }
@@ -48,11 +50,12 @@ namespace MicTest {
         private void Record_Click(object sender, RoutedEventArgs e) {
             Console.WriteLine("Recording");
             waveIn.StartRecording();
+            waveOut.Play();// TODO:DELETE
         }
 
         void OnDataAvailable(object sender, WaveInEventArgs e) {
             waveProvider.AddSamples(e.Buffer, 0, e.Buffer.Length);
-            
+
         }
 
         private void InitAggregator() {
@@ -61,7 +64,6 @@ namespace MicTest {
             aggregator.PerformFFT = true;
             aggregator.FftCalculated += (s, a) => OnFftCalculated(a);
             waveOut.Init(aggregator);//TODO:DELETE 
-            waveOut.Play();// TODO:DELETE
         }
 
         protected virtual void OnFftCalculated(FftEventArgs e) {
@@ -72,18 +74,16 @@ namespace MicTest {
 
         private void CalculateFreaquency(Complex[] complex) {
             List<double> buffer = new List<double>();
-            for (int i = 2; i < complex.Length / 2; i += 2) {
-                buffer.Add(Math.Sqrt(complex[i].X * complex[i].X + complex[i].Y * complex[i].Y));
+            for (int i = 2; i < complex.Length / 2; i += 1) {
+                buffer.Add(20 * Math.Log10(Math.Sqrt(complex[i].X * complex[i].X + complex[i].Y * complex[i].Y)) + Double.Epsilon);
                 ProgressBar tempPb;
-                tempPb =(ProgressBar) spectogram.Children[i];
-                tempPb.Value = (int)Math.Round(buffer[buffer.Count - 1] * 10000); 
+                tempPb = (ProgressBar)spectogram.Children[buffer.Count - 1];
+                tempPb.Value = (int)Math.Round(buffer[buffer.Count - 1]);
             }
 
             double freaquency;
             freaquency = (buffer.IndexOf(buffer.Max()) * waveProvider.WaveFormat.SampleRate / 2) / (complex.Length / 2);
-            if (buffer.Max() > 0) {
-                Console.WriteLine(buffer.Max() + " " + freaquency);
-            }
+            Console.WriteLine(buffer.Max() + " " + freaquency);
         }
 
         private void comboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -98,7 +98,7 @@ namespace MicTest {
         }
 
         private void InitializeWaveProvider(int deviceNumber) {
-            recordingFormat = new WaveFormat(88200, WaveIn.GetCapabilities(deviceNumber).Channels);
+            recordingFormat = new WaveFormat(44100, WaveIn.GetCapabilities(deviceNumber).Channels);
             waveIn.WaveFormat = recordingFormat;
             waveProvider = new BufferedWaveProvider(recordingFormat);
         }
