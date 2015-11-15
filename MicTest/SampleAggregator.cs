@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 using NAudio.Dsp;
 using NAudio.Wave;
@@ -26,7 +24,7 @@ namespace MicTest {
 
         private readonly int channels;
 
-        public SampleAggregator(ISampleProvider source, int fftLength=1024) {
+        public SampleAggregator(ISampleProvider source, int fftLength=2048) {
             channels=source.WaveFormat.Channels;
             if(!IsPowerOfTwo(fftLength)) {
                 throw new ArgumentException("FFT Length must be a power of two");
