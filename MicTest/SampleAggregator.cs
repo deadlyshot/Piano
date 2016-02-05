@@ -5,13 +5,6 @@ using NAudio.Wave;
 
 namespace MicTest {
     class SampleAggregator : ISampleProvider {
-        // volume
-        public event EventHandler<MaxSampleEventArgs> MaximumCalculated;
-        private float maxValue;
-        private float minValue;
-        public int NotificationCount { get; set; }
-        int count;
-
         // FFT
         public event EventHandler<FftEventArgs> FftCalculated;
         public bool PerformFFT { get; set; }
@@ -24,7 +17,7 @@ namespace MicTest {
 
         private readonly int channels;
 
-        public SampleAggregator(ISampleProvider source, int fftLength=2048) {
+        public SampleAggregator(ISampleProvider source, int fftLength=8192) {
             channels=source.WaveFormat.Channels;
             if(!IsPowerOfTwo(fftLength)) {
                 throw new ArgumentException("FFT Length must be a power of two");
@@ -40,12 +33,6 @@ namespace MicTest {
             return ( x&( x-1 ) )==0;
         }
 
-
-        public void Reset() {
-            count=0;
-            maxValue=minValue=0;
-        }
-
         private void Add(float value) {
             if(PerformFFT&&FftCalculated!=null) {
                 fftBuffer[fftPos].X=(float) ( value*FastFourierTransform.HammingWindow(fftPos, fftLength) );
@@ -57,16 +44,6 @@ namespace MicTest {
                     FastFourierTransform.FFT(true, m, fftBuffer);
                     FftCalculated(this, fftArgs);
                 }
-            }
-
-            maxValue=Math.Max(maxValue, value);
-            minValue=Math.Min(minValue, value);
-            count++;
-            if(count>=NotificationCount&&NotificationCount>0) {
-                if(MaximumCalculated!=null) {
-                    MaximumCalculated(this, new MaxSampleEventArgs(minValue, maxValue));
-                }
-                Reset();
             }
         }
 
@@ -80,16 +57,6 @@ namespace MicTest {
             }
             return samplesRead;
         }
-    }
-
-    public class MaxSampleEventArgs : EventArgs {
-        [DebuggerStepThrough]
-        public MaxSampleEventArgs(float minValue, float maxValue) {
-            this.MaxSample=maxValue;
-            this.MinSample=minValue;
-        }
-        public float MaxSample { get; private set; }
-        public float MinSample { get; private set; }
     }
 
     public class FftEventArgs : EventArgs {

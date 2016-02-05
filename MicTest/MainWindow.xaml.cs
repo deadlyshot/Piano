@@ -6,29 +6,31 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using NAudio.Dsp;
+using NAudio.CoreAudioApi;
+using System.Threading;
 
 namespace MicTest {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window {
-        public DispatcherTimer t = new DispatcherTimer();
-        WaveFormat recordingFormat;
-        BufferedWaveProvider waveProvider;
-        WaveIn waveIn = new WaveIn();
-        WaveOut waveOut = new WaveOut();
+        private MainWindowViewModel viewModel;
+
         SampleAggregator aggregator;
+
+        public DispatcherTimer t = new DispatcherTimer();
         public event EventHandler<FftEventArgs> FftCalculated;
+        private int fftlenght = 8192;
 
         public MainWindow() {
             InitializeComponent();
-            GenerateSpectogram();
-            InitializeWaveIn();
-            Record();
+            viewModel = new MainWindowViewModel();
+            this.DataContext = viewModel;
+            //GenerateSpectogram();
         }
 
         private void GenerateSpectogram() {
-            for (int i = 0; i < 1024; i++) {
+            for (int i = 0; i < fftlenght / 2; i++) {
                 ProgressBar newPb = new ProgressBar();
                 newPb.Minimum = -80;
                 newPb.Maximum = 0;
@@ -36,71 +38,42 @@ namespace MicTest {
             }
         }
 
-        private void InitializeWaveIn() {
-            waveIn.BufferMilliseconds = 200;
-            waveIn.DataAvailable += OnDataAvailable;
-        }
-
-        private void Record() {
-            List<WaveInCapabilities> sources = new List<WaveInCapabilities>();
-            for (int i = 0; i < WaveIn.DeviceCount; i++) { sources.Add(WaveIn.GetCapabilities(i)); }
-            foreach (var source in sources) { comboBox.Items.Add(source.ProductName); }
-        }
-
         private void Record_Click(object sender, RoutedEventArgs e) {
             Console.WriteLine("Recording");
-            waveIn.StartRecording();
-            waveOut.Play();// TODO:DELETE
+            viewModel.Record();
         }
 
-        void OnDataAvailable(object sender, WaveInEventArgs e) {
-            waveProvider.AddSamples(e.Buffer, 0, e.Buffer.Length);
+        //private void InitAggregator() {
+        //    aggregator = new SampleAggregator(waveProvider.ToSampleProvider());
+        //    aggregator.NotificationCount = waveProvider.WaveFormat.SampleRate / 100;
+        //    aggregator.PerformFFT = true;
+        //    aggregator.FftCalculated += OnFftCalculated;
+        //    waveOut.Init(aggregator);//TODO:DELETE 
+        //}
 
-        }
+        //protected virtual void OnFftCalculated(object sender,FftEventArgs e) {
+        //    EventHandler<FftEventArgs> handler = FftCalculated;
+        //    if (handler != null) handler(this, e);
+        //    CalculateMagnitude(e.Result);
+        //}
 
-        private void InitAggregator() {
-            aggregator = new SampleAggregator(waveProvider.ToSampleProvider());
-            aggregator.NotificationCount = waveProvider.WaveFormat.SampleRate / 100;
-            aggregator.PerformFFT = true;
-            aggregator.FftCalculated += (s, a) => OnFftCalculated(a);
-            waveOut.Init(aggregator);//TODO:DELETE 
-        }
+        //private void CalculateMagnitude(Complex[] complex) {
+        //    List<double> magnitudes = new List<double>();
+        //    for (int i = 1; i < complex.Length / 2; i += 1) {
+        //        double magnitude = 20 * Math.Log10(Math.Sqrt(complex[i].X * complex[i].X + complex[i].Y * complex[i].Y));
+        //        magnitudes.Add(magnitude);
+        //        ProgressBar tempPb;
+        //        tempPb = (ProgressBar)spectogram.Children[magnitudes.Count - 1];
+        //        tempPb.Value = (int)Math.Round(magnitudes[magnitudes.Count - 1]);
+        //    }
+        //    CalculateMaxFreaquency(magnitudes);
+        //}
 
-        protected virtual void OnFftCalculated(FftEventArgs e) {
-            EventHandler<FftEventArgs> handler = FftCalculated;
-            if (handler != null) handler(this, e);
-            CalculateFreaquency(e.Result);
-        }
-
-        private void CalculateFreaquency(Complex[] complex) {
-            List<double> buffer = new List<double>();
-            for (int i = 2; i < complex.Length / 2; i += 1) {
-                buffer.Add(20 * Math.Log10(Math.Sqrt(complex[i].X * complex[i].X + complex[i].Y * complex[i].Y)) + Double.Epsilon);
-                ProgressBar tempPb;
-                tempPb = (ProgressBar)spectogram.Children[buffer.Count - 1];
-                tempPb.Value = (int)Math.Round(buffer[buffer.Count - 1]);
-            }
-
-            double freaquency;
-            freaquency = (buffer.IndexOf(buffer.Max()) * waveProvider.WaveFormat.SampleRate / 2) / (complex.Length / 2);
-            Console.WriteLine(buffer.Max() + " " + freaquency);
-        }
-
-        private void comboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (comboBox.SelectedItem == null) return;
-            ChangeInputDevice(comboBox.SelectedIndex);
-            InitializeWaveProvider(comboBox.SelectedIndex);
-            InitAggregator();
-        }
-
-        private void ChangeInputDevice(int deviceNumber) {
-            waveIn.DeviceNumber = deviceNumber;
-        }
-
-        private void InitializeWaveProvider(int deviceNumber) {
-            recordingFormat = new WaveFormat(44100, WaveIn.GetCapabilities(deviceNumber).Channels);
-            waveIn.WaveFormat = recordingFormat;
-            waveProvider = new BufferedWaveProvider(recordingFormat);
-        }
+        //private void CalculateMaxFreaquency(List<double> magnitudes) {
+        //    double freaquency;
+        //    freaquency = (magnitudes.IndexOf(magnitudes.Max()) * viewModel.SampleRate / 2) / (fftlenght / 2);
+        //    textBox.AppendText("Magnitude:" + magnitudes.Max() + " Freaquency:" + freaquency + "\n");
+        //    textBox.ScrollToEnd();
+        //}
     }
 }
