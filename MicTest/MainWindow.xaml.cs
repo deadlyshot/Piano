@@ -19,7 +19,6 @@ namespace MicTest {
         SampleAggregator aggregator;
 
         public DispatcherTimer t = new DispatcherTimer();
-        public event EventHandler<FftEventArgs> FftCalculated;
         private int fftlenght = 8192;
 
         public MainWindow() {

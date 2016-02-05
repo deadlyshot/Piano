@@ -19,7 +19,6 @@ namespace MicTest {
         private WaveIn waveIn;
         private readonly SynchronizationContext synchronizationContext;
         private float peak;
-        public event EventHandler<FftEventArgs> FftCalculated;
 
         WaveFormat recordingFormat;
         BufferedWaveProvider waveProvider;
@@ -40,31 +39,19 @@ namespace MicTest {
             waveIn = new WaveIn();
             waveIn.BufferMilliseconds = 200;
             waveIn.DataAvailable += CaptureOnDataAvabile;
-            InitAggregator();
+            aggregator = new SampleAggregator();
             waveIn.StartRecording();
         }
 
         private void CaptureOnDataAvabile(object sender, WaveInEventArgs e) {
-            waveProvider.AddSamples(e.Buffer,0,e.Buffer.Length);
+            waveProvider.AddSamples(e.Buffer, 0, e.Buffer.Length);
+            aggregator.Read(waveProvider.ToSampleProvider(), CalculateMagnitude);
             UpdatePeakMeter();
-        }
-
-        private void InitAggregator() {
-            aggregator = new SampleAggregator(waveProvider.ToSampleProvider());
-            aggregator.PerformFFT = true;
-            aggregator.FftCalculated += OnFftCalculated;
-           // waveOut.Init(aggregator);//TODO:DELETE 
-        }
-
-        protected virtual void OnFftCalculated(object sender, FftEventArgs e) {
-            EventHandler<FftEventArgs> handler = FftCalculated;
-            if (handler != null) handler(this, e);
-            CalculateMagnitude(e.Result);
         }
 
         private void CalculateMagnitude(Complex[] complex) {
             List<double> magnitudes = new List<double>();
-            for (int i = 1; i < complex.Length / 2; i += 1) {
+            for (int i = 1; i < complex.Length / 2; i += 2) {
                 double magnitude = 20 * Math.Log10(Math.Sqrt(complex[i].X * complex[i].X + complex[i].Y * complex[i].Y));
                 magnitudes.Add(magnitude);
                 //ProgressBar tempPb;

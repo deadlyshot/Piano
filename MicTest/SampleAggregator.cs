@@ -4,66 +4,42 @@ using NAudio.Dsp;
 using NAudio.Wave;
 
 namespace MicTest {
-    class SampleAggregator : ISampleProvider {
+    class SampleAggregator {
         // FFT
-        public event EventHandler<FftEventArgs> FftCalculated;
-        public bool PerformFFT { get; set; }
         private readonly Complex[] fftBuffer;
-        private readonly FftEventArgs fftArgs;
-        private int fftPos;
-        private readonly int fftLength;
+        private int fftBufferCurPossition;
+        private readonly int fftBufferLength;
         private int m;
-        private readonly ISampleProvider source;
 
-        private readonly int channels;
+        private readonly int channels = 2;
 
-        public SampleAggregator(ISampleProvider source, int fftLength=8192) {
-            channels=source.WaveFormat.Channels;
-            if(!IsPowerOfTwo(fftLength)) {
+        public SampleAggregator(int fftLength = 8192) {
+            if (!IsPowerOfTwo(fftLength)) {
                 throw new ArgumentException("FFT Length must be a power of two");
             }
-            this.m=(int) Math.Log(fftLength, 2.0);
-            this.fftLength=fftLength;
-            this.fftBuffer=new Complex[fftLength];
-            this.fftArgs=new FftEventArgs(fftBuffer);
-            this.source=source;
+            this.m = (int)Math.Log(fftLength, 2.0);
+            this.fftBufferLength = fftLength;
+            this.fftBuffer = new Complex[fftLength];
         }
 
-        bool IsPowerOfTwo(int x) {
-            return ( x&( x-1 ) )==0;
-        }
+        private bool IsPowerOfTwo(int x) { return (x & (x - 1)) == 0; }
 
-        private void Add(float value) {
-            if(PerformFFT&&FftCalculated!=null) {
-                fftBuffer[fftPos].X=(float) ( value*FastFourierTransform.HammingWindow(fftPos, fftLength) );
-                fftBuffer[fftPos].Y=0;
-                fftPos++;
-                if(fftPos>=fftBuffer.Length) {
-                    fftPos=0;
+        public delegate void FFTCalculated(Complex[] fftBuffer);
+        public void Read(ISampleProvider waveSampleProvider, FFTCalculated FFTCalculated) {
+            float[] dummyFftArray = new float[fftBufferLength];
+            var dummyFftArrayLength = waveSampleProvider.Read(dummyFftArray, 0, fftBufferLength);
+
+            for (int i = 0; i < dummyFftArrayLength; i += channels) {
+                fftBuffer[fftBufferCurPossition].X = (float)(dummyFftArray[i] * FastFourierTransform.HammingWindow(fftBufferCurPossition, fftBufferLength));
+                fftBuffer[fftBufferCurPossition].Y = 0;
+                fftBufferCurPossition++;
+                if (fftBufferCurPossition >= fftBufferLength) {
+                    fftBufferCurPossition = 0;
                     // 1024 = 2^10
                     FastFourierTransform.FFT(true, m, fftBuffer);
-                    FftCalculated(this, fftArgs);
+                    FFTCalculated(fftBuffer);
                 }
             }
         }
-
-        public WaveFormat WaveFormat { get { return source.WaveFormat; } }
-
-        public int Read(float[] buffer, int offset, int count) {
-            var samplesRead=source.Read(buffer, offset, count);
-
-            for(int n=0 ; n<samplesRead ; n+=channels) {
-                Add(buffer[n+offset]);
-            }
-            return samplesRead;
-        }
-    }
-
-    public class FftEventArgs : EventArgs {
-        [DebuggerStepThrough]
-        public FftEventArgs(Complex[] result) {
-            this.Result=result;
-        }
-        public Complex[] Result { get; private set; }
     }
 }
